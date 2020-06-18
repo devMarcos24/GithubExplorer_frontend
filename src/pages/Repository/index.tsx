@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouteMatch, Link } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
@@ -11,12 +11,41 @@ interface RepositoryForm {
   repository: string;
 }
 
+interface Repository {
+  full_name: string;
+  description: string;
+  stargazers_count: number;
+  forks_count: number;
+  open_issues_count: number;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+}
+
+interface Issue {
+  id: number;
+  title: string;
+  html_url: string;
+  user: {
+    login: string;
+  };
+}
+
 const Repository: React.FC = () => {
   const { params } = useRouteMatch<RepositoryForm>();
+  const [repositoryInfo, setRepositoryInfo] = useState<Repository | null>(null);
+  const [issues, setIssues] = useState<Issue[]>([]);
 
   useEffect(() => {
-    api.get(`/repos/${params.repository}`).then((test) => test.data);
-  }, []);
+    api.get(`/repos/${params.repository}`).then((response) => {
+      setRepositoryInfo(response.data);
+    });
+
+    api.get(`/repos/${params.repository}/issues`).then((response) => {
+      setIssues(response.data);
+    });
+  }, [params.repository]);
 
   return (
     <>
@@ -28,44 +57,51 @@ const Repository: React.FC = () => {
         </Link>
       </Header>
 
-      <RepositoryInfo>
-        <header>
-          <img
-            src="https://avatars1.githubusercontent.com/u/67072850?s=400&u=e18de359271c0c3305884882d956dd4f4cc47e25&v=4"
-            alt=""
-          />
-          <div>
-            <strong>facebook/react</strong>
-            <p>
-              A declarative, efficient, and flexible JavaScript library for
-              building user interfaces.
-            </p>
-          </div>
-        </header>
-        <ul>
-          <li>
-            <strong>1808</strong>
-            <span>Stars</span>
-          </li>
-          <li>
-            <strong>48</strong>
-            <span>Forks</span>
-          </li>
-          <li>
-            <strong>67</strong>
-            <span>Issues abertas</span>
-          </li>
-        </ul>
-      </RepositoryInfo>
+      {repositoryInfo && (
+        <RepositoryInfo>
+          <header>
+            <img
+              src={repositoryInfo.owner.avatar_url}
+              alt={repositoryInfo.owner.login}
+            />
+            <div>
+              <strong>{repositoryInfo.full_name}</strong>
+              <p>{repositoryInfo.description}</p>
+            </div>
+          </header>
+          <ul>
+            <li>
+              <strong>{repositoryInfo.stargazers_count}</strong>
+              <span>Stars</span>
+            </li>
+            <li>
+              <strong>{repositoryInfo.forks_count}</strong>
+              <span>Forks</span>
+            </li>
+            <li>
+              <strong>{repositoryInfo.open_issues_count}</strong>
+              <span>Issues abertas</span>
+            </li>
+          </ul>
+        </RepositoryInfo>
+      )}
 
       <Issues>
-        <Link to="/#">
-          <div>
-            <strong>alguma coisa ai</strong>
-            <p>Dev não colocou nenhuma descrição</p>
-          </div>
-          <FiChevronRight size={30} />
-        </Link>
+        {issues &&
+          issues.map((issue) => (
+            <a
+              key={issue.id}
+              target="_blank"
+              rel="noreferrer"
+              href={issue.html_url}
+            >
+              <div key={issue.id}>
+                <strong>{issue.title}</strong>
+                <p>{issue.user.login}</p>
+              </div>
+              <FiChevronRight size={30} />
+            </a>
+          ))}
       </Issues>
     </>
   );
